@@ -1,70 +1,68 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import BuyStockDialog from '@/components/BuyStockDialog';
+import SellStockDialog from '@/components/SellStockDialog';
+import Sidebar from '@/components/Sidebar';
+
+type StockItem = {
+  symbol: string;
+  shares: number;
+  avgCost: number;
+  currentPrice: number;
+  marketValue: number;
+  gainLossPercent: number;
+};
 
 const Profile = () => {
+  const [buyDialogOpen, setBuyDialogOpen] = useState(false);
+  const [sellDialogOpen, setSellDialogOpen] = useState(false);
+  const [selectedStock, setSelectedStock] = useState<StockItem | null>(null);
+  
+  const portfolioData: StockItem[] = [
+    {
+      symbol: "AAPL",
+      shares: 150,
+      avgCost: 142.65,
+      currentPrice: 175.84,
+      marketValue: 26376.00,
+      gainLossPercent: 23.3,
+    },
+    {
+      symbol: "MSFT",
+      shares: 85,
+      avgCost: 288.30,
+      currentPrice: 332.42,
+      marketValue: 28255.70,
+      gainLossPercent: 15.3,
+    },
+    {
+      symbol: "TSLA",
+      shares: 100,
+      avgCost: 242.50,
+      currentPrice: 226.89,
+      marketValue: 22689.00,
+      gainLossPercent: -6.4,
+    },
+  ];
+
+  const handleBuyClick = (stock: StockItem) => {
+    setSelectedStock(stock);
+    setBuyDialogOpen(true);
+  };
+
+  const handleSellClick = (stock: StockItem) => {
+    setSelectedStock(stock);
+    setSellDialogOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="flex h-screen">
         {/* Sidebar */}
-        <div className="w-64 bg-gray-900 text-white">
-          <div className="p-4 h-16 flex items-center border-b border-gray-800">
-            <h1 className="text-xl font-bold">StockSpy</h1>
-          </div>
-          <ul className="py-4">
-            <li className="px-4 py-2 hover:bg-gray-800">
-              <Link to="/" className="flex items-center">
-                <i className="fas fa-tachometer-alt mr-2"></i>
-                <span>Dashboard</span>
-              </Link>
-            </li>
-            <li className="px-4 py-2 bg-gray-800">
-              <Link to="/profile" className="flex items-center">
-                <i className="fas fa-user mr-2"></i>
-                <span>Profile</span>
-              </Link>
-            </li>
-            <li className="px-4 py-2 hover:bg-gray-800">
-              <Link to="/statistics" className="flex items-center">
-                <i className="fas fa-chart-bar mr-2"></i>
-                <span>Statistics</span>
-              </Link>
-            </li>
-            <li className="px-4 py-2 hover:bg-gray-800">
-              <Link to="/analysis" className="flex items-center">
-                <i className="fas fa-briefcase mr-2"></i>
-                <span>Analysis</span>
-              </Link>
-            </li>
-            <li className="px-4 py-2 hover:bg-gray-800">
-              <Link to="/faq" className="flex items-center">
-                <i className="fas fa-question-circle mr-2"></i>
-                <span>FAQ</span>
-              </Link>
-            </li>
-            <li className="px-4 py-2 hover:bg-gray-800">
-              <Link to="/testimonials" className="flex items-center">
-                <i className="fas fa-star mr-2"></i>
-                <span>Testimonials</span>
-              </Link>
-            </li>
-            <li className="px-4 py-2 hover:bg-gray-800">
-              <Link to="/settings" className="flex items-center">
-                <i className="fas fa-cog mr-2"></i>
-                <span>Settings</span>
-              </Link>
-            </li>
-            <li className="px-4 py-2 mt-auto hover:bg-gray-800">
-              <Link to="/logout" className="flex items-center">
-                <i className="fas fa-sign-out-alt mr-2"></i>
-                <span>Logout</span>
-              </Link>
-            </li>
-          </ul>
-        </div>
+        <Sidebar />
         
         {/* Main Content */}
         <div className="flex-1 overflow-y-auto">
@@ -114,6 +112,7 @@ const Profile = () => {
               <TabsContent value="portfolio" className="mt-6">
                 <h3 className="text-xl font-semibold mb-4">Your Portfolio</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  {/* Dashboard cards */}
                   <Card className="p-4">
                     <h4 className="text-sm text-gray-500 mb-1">Total Value</h4>
                     <div className="text-2xl font-bold">$126,854.20</div>
@@ -145,48 +144,36 @@ const Profile = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      <tr>
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900">AAPL</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">150</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">$142.65</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">$175.84</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">$26,376.00</td>
-                        <td className="px-6 py-4 text-sm text-green-500">+23.3%</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">
-                          <div className="flex space-x-2">
-                            <Button variant="outline" size="sm">Buy</Button>
-                            <Button variant="outline" size="sm">Sell</Button>
-                          </div>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900">MSFT</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">85</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">$288.30</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">$332.42</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">$28,255.70</td>
-                        <td className="px-6 py-4 text-sm text-green-500">+15.3%</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">
-                          <div className="flex space-x-2">
-                            <Button variant="outline" size="sm">Buy</Button>
-                            <Button variant="outline" size="sm">Sell</Button>
-                          </div>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900">TSLA</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">100</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">$242.50</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">$226.89</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">$22,689.00</td>
-                        <td className="px-6 py-4 text-sm text-red-500">-6.4%</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">
-                          <div className="flex space-x-2">
-                            <Button variant="outline" size="sm">Buy</Button>
-                            <Button variant="outline" size="sm">Sell</Button>
-                          </div>
-                        </td>
-                      </tr>
+                      {portfolioData.map((stock) => (
+                        <tr key={stock.symbol}>
+                          <td className="px-6 py-4 text-sm font-medium text-gray-900">{stock.symbol}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500">{stock.shares}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500">${stock.avgCost.toFixed(2)}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500">${stock.currentPrice.toFixed(2)}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500">${stock.marketValue.toFixed(2)}</td>
+                          <td className={`px-6 py-4 text-sm ${stock.gainLossPercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            {stock.gainLossPercent >= 0 ? '+' : ''}{stock.gainLossPercent.toFixed(1)}%
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500">
+                            <div className="flex space-x-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleBuyClick(stock)}
+                              >
+                                Buy
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleSellClick(stock)}
+                              >
+                                Sell
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -391,8 +378,34 @@ const Profile = () => {
           </div>
         </div>
       </div>
+
+      {/* Buy Stock Dialog */}
+      {selectedStock && (
+        <BuyStockDialog
+          open={buyDialogOpen}
+          onOpenChange={setBuyDialogOpen}
+          stock={{
+            symbol: selectedStock.symbol,
+            currentPrice: selectedStock.currentPrice
+          }}
+        />
+      )}
+
+      {/* Sell Stock Dialog */}
+      {selectedStock && (
+        <SellStockDialog
+          open={sellDialogOpen}
+          onOpenChange={setSellDialogOpen}
+          stock={{
+            symbol: selectedStock.symbol,
+            currentPrice: selectedStock.currentPrice,
+            ownedShares: selectedStock.shares
+          }}
+        />
+      )}
     </div>
   );
 };
 
 export default Profile;
+
