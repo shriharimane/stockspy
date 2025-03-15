@@ -29,9 +29,15 @@ type BuyStockDialogProps = {
     symbol: string;
     currentPrice: number;
   };
+  onStockPurchased?: (symbol: string, shares: number, price: number) => void;
 };
 
-const BuyStockDialog = ({ open, onOpenChange, stock }: BuyStockDialogProps) => {
+const BuyStockDialog = ({ 
+  open, 
+  onOpenChange, 
+  stock, 
+  onStockPurchased 
+}: BuyStockDialogProps) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -49,6 +55,11 @@ const BuyStockDialog = ({ open, onOpenChange, stock }: BuyStockDialogProps) => {
       
       // In a real application, this would be an API call to process the purchase
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulating API call
+      
+      // Call the provided callback with purchase details
+      if (onStockPurchased) {
+        onStockPurchased(stock.symbol, shares, stock.currentPrice);
+      }
       
       toast.success(`Successfully purchased ${shares} shares of ${stock.symbol} for $${totalCost.toFixed(2)}`);
       form.reset();

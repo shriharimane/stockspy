@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BuyStockDialog from '@/components/BuyStockDialog';
 import SellStockDialog from '@/components/SellStockDialog';
 import Sidebar from '@/components/Sidebar';
+import { toast } from "sonner";
 
 type StockItem = {
   symbol: string;
@@ -16,12 +17,20 @@ type StockItem = {
   gainLossPercent: number;
 };
 
+type Transaction = {
+  date: string;
+  type: 'Buy' | 'Sell';
+  symbol: string;
+  shares: number;
+  price: number;
+  total: number;
+};
+
 const Profile = () => {
   const [buyDialogOpen, setBuyDialogOpen] = useState(false);
   const [sellDialogOpen, setSellDialogOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState<StockItem | null>(null);
-  
-  const portfolioData: StockItem[] = [
+  const [portfolioData, setPortfolioData] = useState<StockItem[]>([
     {
       symbol: "AAPL",
       shares: 150,
@@ -46,7 +55,40 @@ const Profile = () => {
       marketValue: 22689.00,
       gainLossPercent: -6.4,
     },
-  ];
+  ]);
+  
+  const [transactions, setTransactions] = useState<Transaction[]>([
+    {
+      date: "May 15, 2023",
+      type: "Buy",
+      symbol: "AAPL",
+      shares: 25,
+      price: 168.22,
+      total: 4205.50,
+    },
+    {
+      date: "May 10, 2023",
+      type: "Sell",
+      symbol: "NFLX",
+      shares: 15,
+      price: 418.56,
+      total: 6278.40,
+    },
+    {
+      date: "May 5, 2023",
+      type: "Buy",
+      symbol: "MSFT",
+      shares: 10,
+      price: 304.18,
+      total: 3041.80,
+    },
+  ]);
+
+  const [portfolioValue, setPortfolioValue] = useState(0);
+  useEffect(() => {
+    const total = portfolioData.reduce((sum, stock) => sum + stock.marketValue, 0);
+    setPortfolioValue(total);
+  }, [portfolioData]);
 
   const handleBuyClick = (stock: StockItem) => {
     setSelectedStock(stock);
@@ -58,13 +100,117 @@ const Profile = () => {
     setSellDialogOpen(true);
   };
 
+  const handleStockPurchased = (symbol: string, shares: number, price: number) => {
+    setPortfolioData(prevData => {
+      const newData = [...prevData];
+      const stockIndex = newData.findIndex(item => item.symbol === symbol);
+      
+      if (stockIndex !== -1) {
+        const stock = newData[stockIndex];
+        const newShares = stock.shares + shares;
+        const newTotalCost = (stock.shares * stock.avgCost) + (shares * price);
+        const newAvgCost = newTotalCost / newShares;
+        const newMarketValue = newShares * stock.currentPrice;
+        const newGainLossPercent = ((stock.currentPrice - newAvgCost) / newAvgCost) * 100;
+        
+        newData[stockIndex] = {
+          ...stock,
+          shares: newShares,
+          avgCost: newAvgCost,
+          marketValue: newMarketValue,
+          gainLossPercent: newGainLossPercent,
+        };
+      } else {
+        newData.push({
+          symbol,
+          shares,
+          avgCost: price,
+          currentPrice: price,
+          marketValue: shares * price,
+          gainLossPercent: 0,
+        });
+      }
+      
+      return newData;
+    });
+    
+    const total = shares * price;
+    setTransactions(prev => [
+      {
+        date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+        type: 'Buy',
+        symbol,
+        shares,
+        price,
+        total
+      },
+      ...prev
+    ]);
+
+    toast.success(`Portfolio updated with purchase of ${shares} shares of ${symbol}`);
+  };
+
+  const handleStockSold = (symbol: string, shares: number, price: number) => {
+    setPortfolioData(prevData => {
+      const newData = [...prevData];
+      const stockIndex = newData.findIndex(item => item.symbol === symbol);
+      
+      if (stockIndex !== -1) {
+        const stock = newData[stockIndex];
+        
+        const newShares = stock.shares - shares;
+        
+        if (newShares > 0) {
+          const newMarketValue = newShares * stock.currentPrice;
+          
+          newData[stockIndex] = {
+            ...stock,
+            shares: newShares,
+            marketValue: newMarketValue,
+          };
+        } else {
+          newData.splice(stockIndex, 1);
+          toast.info(`${symbol} has been removed from your portfolio as you've sold all shares.`);
+        }
+      }
+      
+      return newData;
+    });
+    
+    const total = shares * price;
+    setTransactions(prev => [
+      {
+        date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+        type: 'Sell',
+        symbol,
+        shares,
+        price,
+        total
+      },
+      ...prev
+    ]);
+
+    toast.success(`Portfolio updated with sale of ${shares} shares of ${symbol}`);
+  };
+
+  const getTotalGainLoss = () => {
+    const totalInvested = portfolioData.reduce((sum, stock) => sum + (stock.shares * stock.avgCost), 0);
+    const currentValue = portfolioValue;
+    const percentChange = totalInvested > 0 ? ((currentValue - totalInvested) / totalInvested) * 100 : 0;
+    
+    return {
+      value: currentValue - totalInvested,
+      percent: percentChange
+    };
+  };
+
+  const gainLoss = getTotalGainLoss();
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="flex h-screen">
-        {/* Sidebar */}
         <Sidebar />
         
-        {/* Main Content */}
         <div className="flex-1 overflow-y-auto">
           <div className="p-6 bg-white shadow-sm flex justify-between items-center">
             <div>
@@ -112,11 +258,12 @@ const Profile = () => {
               <TabsContent value="portfolio" className="mt-6">
                 <h3 className="text-xl font-semibold mb-4">Your Portfolio</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  {/* Dashboard cards */}
                   <Card className="p-4">
                     <h4 className="text-sm text-gray-500 mb-1">Total Value</h4>
-                    <div className="text-2xl font-bold">$126,854.20</div>
-                    <div className="text-green-500 text-sm mt-1">+2.14% today</div>
+                    <div className="text-2xl font-bold">${portfolioValue.toFixed(2)}</div>
+                    <div className={`text-sm mt-1 ${gainLoss.percent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {gainLoss.percent >= 0 ? '+' : ''}{gainLoss.percent.toFixed(2)}% overall
+                    </div>
                   </Card>
                   <Card className="p-4">
                     <h4 className="text-sm text-gray-500 mb-1">Annual Return</h4>
@@ -174,6 +321,13 @@ const Profile = () => {
                           </td>
                         </tr>
                       ))}
+                      {portfolioData.length === 0 && (
+                        <tr>
+                          <td colSpan={7} className="px-6 py-4 text-sm text-center text-gray-500">
+                            No stocks in your portfolio. Start by adding some stocks!
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -195,39 +349,28 @@ const Profile = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      <tr>
-                        <td className="px-6 py-4 text-sm text-gray-500">May 15, 2023</td>
-                        <td className="px-6 py-4 text-sm text-green-500">Buy</td>
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900">AAPL</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">25</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">$168.22</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">$4,205.50</td>
-                        <td className="px-6 py-4 text-sm">
-                          <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">Completed</span>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="px-6 py-4 text-sm text-gray-500">May 10, 2023</td>
-                        <td className="px-6 py-4 text-sm text-red-500">Sell</td>
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900">NFLX</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">15</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">$418.56</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">$6,278.40</td>
-                        <td className="px-6 py-4 text-sm">
-                          <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">Completed</span>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="px-6 py-4 text-sm text-gray-500">May 5, 2023</td>
-                        <td className="px-6 py-4 text-sm text-green-500">Buy</td>
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900">MSFT</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">10</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">$304.18</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">$3,041.80</td>
-                        <td className="px-6 py-4 text-sm">
-                          <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">Completed</span>
-                        </td>
-                      </tr>
+                      {transactions.map((transaction, index) => (
+                        <tr key={index}>
+                          <td className="px-6 py-4 text-sm text-gray-500">{transaction.date}</td>
+                          <td className={`px-6 py-4 text-sm ${transaction.type === 'Buy' ? 'text-green-500' : 'text-red-500'}`}>
+                            {transaction.type}
+                          </td>
+                          <td className="px-6 py-4 text-sm font-medium text-gray-900">{transaction.symbol}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500">{transaction.shares}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500">${transaction.price.toFixed(2)}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500">${transaction.total.toFixed(2)}</td>
+                          <td className="px-6 py-4 text-sm">
+                            <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">Completed</span>
+                          </td>
+                        </tr>
+                      ))}
+                      {transactions.length === 0 && (
+                        <tr>
+                          <td colSpan={7} className="px-6 py-4 text-sm text-center text-gray-500">
+                            No transaction history yet.
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -379,7 +522,6 @@ const Profile = () => {
         </div>
       </div>
 
-      {/* Buy Stock Dialog */}
       {selectedStock && (
         <BuyStockDialog
           open={buyDialogOpen}
@@ -388,10 +530,10 @@ const Profile = () => {
             symbol: selectedStock.symbol,
             currentPrice: selectedStock.currentPrice
           }}
+          onStockPurchased={handleStockPurchased}
         />
       )}
 
-      {/* Sell Stock Dialog */}
       {selectedStock && (
         <SellStockDialog
           open={sellDialogOpen}
@@ -401,6 +543,7 @@ const Profile = () => {
             currentPrice: selectedStock.currentPrice,
             ownedShares: selectedStock.shares
           }}
+          onStockSold={handleStockSold}
         />
       )}
     </div>
@@ -408,4 +551,3 @@ const Profile = () => {
 };
 
 export default Profile;
-
